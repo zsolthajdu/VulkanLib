@@ -7,6 +7,8 @@ cmake_minimum_required (VERSION 3.8)
 # https://heishenhua.com
 add_executable (HelloVulkan "HelloVulkan.cpp" )
 
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
 # Windows library dependencies
 include_directories( "C:/Users/z_haj/Documents/Visual Studio 2022/Libraries/glfw-3.3.7/include"
 				"C:/Users/z_haj/Documents/Visual Studio 2022/Libraries/glm"
