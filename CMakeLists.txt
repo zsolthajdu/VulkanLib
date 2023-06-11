@@ -10,13 +10,13 @@ add_executable (HelloVulkan "HelloVulkan.cpp" )
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Windows library dependencies
-include_directories( "C:/Users/z_haj/Documents/Visual Studio 2022/Libraries/glfw-3.3.7/include"
-				"C:/Users/z_haj/Documents/Visual Studio 2022/Libraries/glm"
-				"C:/VulkanSDK/1.3.216.0/Include"
+include_directories( "C:/Users/z_haj/Devel/Libraries/glfw-3.3.8/include"
+				"C:/Users/z_haj/Devel/Libraries/glm"
+				"C:/VulkanSDK/1.3.243.0/Include"
 	)
 	
-target_link_directories( HelloVulkan PUBLIC  "C:/Users/z_haj/Documents/Visual Studio 2022/Libraries/glfw-3.3.7.bin.WIN64/lib-vc2022"
-				"C:/VulkanSDK/1.3.216.0/Lib"
+target_link_directories( HelloVulkan PUBLIC  "C:/Users/z_haj/Devel/Libraries/glfw-3.3.8.bin.WIN64/lib-vc2019"
+				"C:/VulkanSDK/1.3.243.0/Lib"
 	)
 
 
