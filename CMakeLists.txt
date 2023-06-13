@@ -1,6 +1,8 @@
 ﻿# CMakeList.txt : CMake project for HelloVulkan, include source and define
 # project specific logic here.
 #
+# REQUIRES C++x17 minimum
+
 cmake_minimum_required (VERSION 3.8)
 
 # Add source to this project's executable.
