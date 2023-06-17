@@ -32,12 +32,58 @@ namespace zsolt {
         std::vector<VkPresentModeKHR> presentModes;
     };
 
+
+    class VkSem
+    {
+        VkSemaphore Semaphore_;
+
+    public:
+
+        VkResult create(VkDevice dev)
+        {
+            VkSemaphoreCreateInfo semaphoreInfo{};
+
+            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            return vkCreateSemaphore(dev, &semaphoreInfo, nullptr, &Semaphore_);
+        }
+
+        VkSemaphore get() { return Semaphore_; }
+    };
+
+    class vulFence
+    {
+        VkFence fence_;
+
+    public:
+        VkResult create(VkDevice device)
+        {
+            VkFenceCreateInfo fenceInfo{};
+            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+            return vkCreateFence(device, &fenceInfo, nullptr, &fence_);
+        }
+
+        VkFence get() { return fence_; }
+
+        void wait(VkDevice device)
+        {
+            vkWaitForFences(device, 1, &fence_, VK_TRUE, UINT64_MAX);
+        }
+
+        void reset(VkDevice device)
+        {
+            vkResetFences(device, 1, &fence_);
+        }
+    };
+
+
     class VulkanApplication
     {
 
     protected:
         VkDevice device;
-        VkFence inFlightFence;
+        vulFence inFlightFence_;
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffer;
         VkQueue graphicsQueue;
@@ -45,8 +91,8 @@ namespace zsolt {
 
         VkSwapchainKHR swapChain;
 
-        VkSemaphore imageAvailableSemaphore;
-        VkSemaphore renderFinishedSemaphore;
+        VkSem imageAvailableSemaphore_;
+        VkSem renderFinishedSemaphore_;
         GLFWwindow* window;
         bool enableValidationLayers;
 
@@ -713,16 +759,13 @@ namespace zsolt {
 
         void createSyncObjects() 
         {
-            VkSemaphoreCreateInfo semaphoreInfo{};
-            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
             VkFenceCreateInfo fenceInfo{};
             fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-            if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-                vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-                vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) {
+            if (imageAvailableSemaphore_.create(device) != VK_SUCCESS || renderFinishedSemaphore_.create(device) != VK_SUCCESS ||
+                inFlightFence_.create(device) != VK_SUCCESS) 
+            {
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
             }
         }
