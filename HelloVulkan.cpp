@@ -14,9 +14,9 @@ using namespace zsolt;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-//const std::vector<const char*> validationLayers = {
-//    "VK_LAYER_KHRONOS_validation"
-//};
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -41,9 +41,6 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-const std::vector<const char*> VulkanApplication::validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -56,7 +53,7 @@ public:
     void run() 
     {
         initWindow();
-        VulkanApplication::init();
+        init(validationLayers);
         mainLoop();
         cleanup();
     }
@@ -94,7 +91,7 @@ private:
         }
 
         return extensions;
-    }*/
+    }
 
     bool checkValidationLayerSupport() {
         uint32_t layerCount;
@@ -120,8 +117,7 @@ private:
 
         return true;
     }
-
-
+*/
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
         VkCommandBufferBeginInfo beginInfo{};
