@@ -83,19 +83,63 @@ namespace zsolt {
 
         return VK_FALSE;
     }
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
-    {
-        createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        createInfo.pfnUserCallback = debugCallback;
-    }
 
-    //const std::vector<const char*> validationLayers =
-    //{
-    //    "VK_LAYER_KHRONOS_validation"
-    //};
+    class DebugMessenger
+    {
+
+        VkDebugUtilsMessengerEXT debugMessenger_;
+        VkInstance instance_;
+
+        VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator,
+            VkDebugUtilsMessengerEXT* pDebugMessenger)
+        {
+            auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+            if (func != nullptr) {
+                return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+            }
+            else {
+                return VK_ERROR_EXTENSION_NOT_PRESENT;
+            }
+        }
+
+        void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+        {
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+            if (func != nullptr)
+                func(instance, debugMessenger, pAllocator);
+        }
+
+    public:
+        void init(VkInstance instance)
+        {
+            VkDebugUtilsMessengerCreateInfoEXT createInfo;
+            createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+            createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            createInfo.pfnUserCallback = debugCallback;
+
+            if ( CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger_) != VK_SUCCESS)
+                throw std::runtime_error("failed to set up debug messenger!");
+
+            instance_ = instance;
+        }
+
+        void destroy()
+        {
+            DestroyDebugUtilsMessengerEXT(instance_, debugMessenger_, nullptr);
+            instance_ = 0;
+            debugMessenger_ = 0;
+        }
+
+        DebugMessenger::DebugMessenger() : debugMessenger_(0), instance_(0) {}
+
+        DebugMessenger::~DebugMessenger()
+        {
+            if (instance_ && debugMessenger_)
+                destroy();
+        }
+    };
+
     /*
     */
     class vulInstance
@@ -121,12 +165,9 @@ namespace zsolt {
                         break;
                     }
                 }
-
-                if (!layerFound) 
-                    return false;
             }
 
-            return true;
+            return layerFound;
         }
 
         std::vector<const char*> getRequiredExtensions( bool enableValidationLayers)
@@ -142,7 +183,7 @@ namespace zsolt {
 
             return extensions;
         }
-        /*
+
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
         {
             createInfo = {};
@@ -150,7 +191,7 @@ namespace zsolt {
             createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
             createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
             createInfo.pfnUserCallback = debugCallback;
-        }*/
+        }
 
     public:
 
@@ -219,8 +260,7 @@ namespace zsolt {
         GLFWwindow* window;
         bool enableValidationLayers;
 
-        //VkInstance instance;
-        VkDebugUtilsMessengerEXT debugMessenger;
+        DebugMessenger  debugMessenger;
         VkSurfaceKHR surface;
 
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -243,9 +283,10 @@ namespace zsolt {
        // const static std::vector<const char*> validationLayers;
         const static std::vector<const char*> deviceExtensions;
 
-        void init(const std::vector<const char*> & validationLayers) {
+        void init(const std::vector<const char*> & validationLayers) 
+        {
             instance_.create(enableValidationLayers , validationLayers);
-            setupDebugMessenger();
+            debugMessenger.init(instance_.get());
             createSurface();
             pickPhysicalDevice();
             createLogicalDevice(validationLayers);
@@ -259,11 +300,11 @@ namespace zsolt {
             createSyncObjects();
         }
          
-        void cleanup() {
+        void cleanup() 
+        {
             if (enableValidationLayers) 
-            {
-                DestroyDebugUtilsMessengerEXT(instance_.get(), debugMessenger, nullptr);
-            }
+                debugMessenger.destroy();
+
             vkDestroyInstance(instance_.get(), nullptr);
             glfwDestroyWindow(window);
             glfwTerminate();
@@ -280,52 +321,6 @@ namespace zsolt {
 
             window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
         }
-
-        //void initVulkan() {
-        //    createInstance();
-        //    setupDebugMessenger();
-        //}
-        /*
-        void createInstance() 
-        {
-            if (enableValidationLayers && !checkValidationLayerSupport()) {
-                throw std::runtime_error("validation layers requested, but not available!");
-            }
-
-            VkApplicationInfo appInfo{};
-            appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-            appInfo.pApplicationName = "Hello Triangle";
-            appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-            appInfo.pEngineName = "No Engine";
-            appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-            appInfo.apiVersion = VK_API_VERSION_1_0;
-
-            VkInstanceCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-            createInfo.pApplicationInfo = &appInfo;
-
-            auto extensions = getRequiredExtensions();
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-            createInfo.ppEnabledExtensionNames = extensions.data();
-
-            VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-            if (enableValidationLayers) {
-                createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-                createInfo.ppEnabledLayerNames = validationLayers.data();
-
-                populateDebugMessengerCreateInfo(debugCreateInfo);
-                createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-            }
-            else {
-                createInfo.enabledLayerCount = 0;
-
-                createInfo.pNext = nullptr;
-            }
-
-            if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create instance!");
-            }
-        }*/
 
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) 
         {
@@ -358,14 +353,16 @@ namespace zsolt {
             return indices;
         }
 
-        void createSurface() {
+        void createSurface() 
+        {
             if (glfwCreateWindowSurface(instance_.get(), window, nullptr, &surface) != VK_SUCCESS) {
                 throw std::runtime_error("failed to create window surface!");
             }
         }
 
 
-        bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+        bool checkDeviceExtensionSupport(VkPhysicalDevice device) 
+        {
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -382,7 +379,8 @@ namespace zsolt {
         }
 
 
-        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) 
+        {
             if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
                 return capabilities.currentExtent;
             }
@@ -402,7 +400,8 @@ namespace zsolt {
             }
         }
 
-        SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
+        SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) 
+        {
             SwapChainSupportDetails details;
 
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -426,7 +425,8 @@ namespace zsolt {
             return details;
         }
 
-        bool isDeviceSuitable(VkPhysicalDevice device) {
+        bool isDeviceSuitable(VkPhysicalDevice device) 
+        {
             QueueFamilyIndices indices = findQueueFamilies(device);
 
             bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -440,7 +440,8 @@ namespace zsolt {
             return indices.isComplete() && extensionsSupported && swapChainAdequate;
         }
 
-        void pickPhysicalDevice() {
+        void pickPhysicalDevice() 
+        {
             uint32_t deviceCount = 0;
             vkEnumeratePhysicalDevices(instance_.get(), &deviceCount, nullptr);
 
@@ -463,7 +464,8 @@ namespace zsolt {
             }
         }
 
-        void createLogicalDevice(const std::vector<const char*>& validationLayers) {
+        void createLogicalDevice(const std::vector<const char*>& validationLayers) 
+        {
             QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
             std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -510,7 +512,8 @@ namespace zsolt {
 
 
 
-        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) 
+        {
             for (const auto& availableFormat : availableFormats) {
                 if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                     return availableFormat;
@@ -520,7 +523,8 @@ namespace zsolt {
             return availableFormats[0];
         }
 
-        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) 
+        {
             for (const auto& availablePresentMode : availablePresentModes) {
                 if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
                     return availablePresentMode;
@@ -530,7 +534,8 @@ namespace zsolt {
             return VK_PRESENT_MODE_FIFO_KHR;
         }
 
-        void createSwapChain() {
+        void createSwapChain() 
+        {
             SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
             VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -584,7 +589,8 @@ namespace zsolt {
             swapChainExtent = extent;
         }
 
-        void createImageViews() {
+        void createImageViews() 
+        {
             swapChainImageViews.resize(swapChainImages.size());
 
             for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -609,7 +615,8 @@ namespace zsolt {
             }
         }
 
-        void createRenderPass() {
+        void createRenderPass() 
+        {
             VkAttachmentDescription colorAttachment{};
             colorAttachment.format = swapChainImageFormat;
             colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -646,7 +653,8 @@ namespace zsolt {
             renderPassInfo.dependencyCount = 1;
             renderPassInfo.pDependencies = &dependency;
 
-            if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+            if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) 
+            {
                 throw std::runtime_error("failed to create render pass!");
             }
         }
@@ -884,18 +892,6 @@ namespace zsolt {
             }
         }
 
-        void setupDebugMessenger()
-        {
-            if (enableValidationLayers)
-            {
-                VkDebugUtilsMessengerCreateInfoEXT createInfo;
-                populateDebugMessengerCreateInfo(createInfo);
-
-                if (CreateDebugUtilsMessengerEXT(instance_.get(), &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
-                    throw std::runtime_error("failed to set up debug messenger!");            
-            }
-        }
-
         static std::vector<char> readFile(const std::string& filename) {
             std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -914,7 +910,8 @@ namespace zsolt {
             return buffer;
         }
 
-        VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) 
+        VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, 
+                    VkDebugUtilsMessengerEXT* pDebugMessenger) 
         {
             auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
             if (func != nullptr) {
