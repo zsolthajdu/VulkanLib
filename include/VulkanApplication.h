@@ -283,7 +283,7 @@ namespace zsolt {
        // const static std::vector<const char*> validationLayers;
         const static std::vector<const char*> deviceExtensions;
 
-        void init(const std::vector<const char*> & validationLayers) 
+        void init(const std::vector<const char*> & validationLayers, std::string& vertShaderFile, std::string& fragShaderFile)
         {
             instance_.create(enableValidationLayers , validationLayers);
             debugMessenger.init(instance_.get());
@@ -293,7 +293,7 @@ namespace zsolt {
             createSwapChain();
             createImageViews();
             createRenderPass();
-            createGraphicsPipeline();
+            createGraphicsPipeline(vertShaderFile,fragShaderFile);
             createFramebuffers();
             createCommandPool();
             createCommandBuffer();
@@ -674,7 +674,7 @@ namespace zsolt {
             return shaderModule;
         }
 
-        void createGraphicsPipeline() 
+        void createGraphicsPipeline(std::string &vertShaderFile, std::string& fragShaderFile)
         {
             auto vertShaderCode = readFile("shaders/vert.spv");
             auto fragShaderCode = readFile("shaders/frag.spv");
